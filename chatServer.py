@@ -2,7 +2,8 @@ import socket
 import select
 from _thread import *
 import sys
-
+import threading
+import bot
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -24,14 +25,25 @@ def clientthread(conn, addr):
             try:     
                 message = conn.recv(2048).decode('utf_8')    
                 if message:
-                    print("[" + addr[0] + "] " + message)
-                    message_to_send = "[" + addr[0] + "] " + message
-                    broadcast(message_to_send,conn)
+                    if message[:4] == "wiki":
+                        botThread = threading.Thread(target=bot.main, args=(message[5:-1],))
+                        botThread.start()
+                        botThread.join()
+                        thestring = bot.astring
+                        broadcast(thestring, conn)
+                    else:
+                        print("[" + addr[0] + "] " + message)
+                        message_to_send = "[" + addr[0] + "] " + message
+                        broadcast(message_to_send,conn)
+
+                    print("past that stuff")
                     #prints the message and address of the user who just sent the message on the server terminal
                 else:
                     remove(conn)
-            except:
-                continue
+            except Exception as ex:
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                print(message)
 
 def broadcast(message,connection):
     for clients in list_of_clients:
