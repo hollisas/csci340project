@@ -1,16 +1,13 @@
 import socket
 import select
-from _thread import *
 import os
 import requests
 import sys
 
 
 def get_request(topic):
-
     URL = "https://en.wikipedia.org/wiki/" + topic
     response = requests.get(url = URL)
-
     response2 = list(response.iter_lines())
     thestring = parse(response2, topic)
 
@@ -27,8 +24,9 @@ def parse(text_response, topic):
         item_lower = item.lower()
         # find ambigous cases
         if "refer to" in item or "refers to" in item:
+            astring = "Term too ambigous, please try again"
             print("Term too ambigous, please try again")
-            print(index)
+            # print(index)
             exit()
 
         # find first <p> tag containing search term
@@ -38,6 +36,7 @@ def parse(text_response, topic):
             break
 
     if found == False:
+        astring = "Term too ambigous, please try again"
         print("Term too ambigous, please try again")
         exit()
 
@@ -75,18 +74,11 @@ def parse(text_response, topic):
             index += 1
 
     astring += "."
-
     message1 = astring
-
-    print(astring)
-    
-
+    print(astring) 
 
 def main(topic):
     get_request(topic)
 
-
 if __name__ == "__main__":
     pass
-
-# main()
