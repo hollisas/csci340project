@@ -1,59 +1,97 @@
 import socket
 import select
-from _thread import *
 import sys
+import threading
+import bot
 
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-if len(sys.argv) != 3:
-    print("Correct usage: script, IP address, port number")
-    exit()
-IP_address = str(sys.argv[1])
-Port = int(sys.argv[2])
-server.bind((IP_address, Port)) 
-#binds the server to an entered IP address and at the specified port number. The client must be aware of these parameters
-server.listen(100)
-#listens for 100 active connections. This number can be increased as per convenience
-list_of_clients=[]
 
-def clientthread(conn, addr):
-    conn.sendall(b"Welcome to this chatroom!")
-    #sends a message to the client whose user object is conn
-    while True:
-            try:     
-                message = conn.recv(2048).decode('utf_8')    
-                if message:
-                    print("[" + addr[0] + "] " + message)
-                    message_to_send = "[" + addr[0] + "] " + message
-                    broadcast(message_to_send,conn)
-                    #prints the message and address of the user who just sent the message on the server terminal
+def client_thread(connection, address):
+
+    connection.sendall(("____________________________\nYou are now online as " + all_clients[connection]).encode('utf_8'))
+    
+    while(True):
+        try:     
+            message = connection.recv(1024).decode('utf_8')    
+            if message:
+                if message[:5] == "!wiki":
+                    botThread = threading.Thread(target=bot.main, args=(message[5:-1],))
+                    botThread.start()
+                    
+                    post_to_others("[" + all_clients[connection] + " has sent a wiki request]", connection)
+                    connection.sendall("[You have sent a wiki request]".encode('utf-8'))
+                    
+                    botThread.join()
+                    
+                    astring = bot.astring
+                    post_to_all(("[Wikibot] " + astring), connection)
+
                 else:
-                    remove(conn)
-            except:
-                continue
+                    message_to_send = "[" + all_clients[connection] + "] " + message
+                    post_to_others(message_to_send, connection)
+            else:
+                remove(connection)
 
-def broadcast(message,connection):
-    for clients in list_of_clients:
-        if clients!=connection:
+        # Exception handling not our code: https://stackoverflow.com/questions/9823936/python-how-do-i-know-what-type-of-exception-occurred
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
+
+def remove(rconnection):
+    global i
+    if rconnection in all_clients.keys():
+        client_list.remove(rconnection)
+        post_to_others("[" + all_clients[rconnection] + " has left]", connection)
+        del all_clients[rconnection]
+        i -= 1
+
+def post_to_others(message, connection):
+    print(message)
+    for clients in client_list:
+        if clients != connection:
             try:
                 clients.sendall(message.encode('utf-8'))
             except:
                 clients.close()
                 remove(clients)
 
-def remove(connection):
-    if connection in list_of_clients:
-        list_of_clients.remove(connection)
+def post_to_all(message, connection):
+    print(message)
+    for clients in client_list:
+        try:
+            clients.sendall(message.encode('utf-8'))
+        except:
+            remove(clients)
+            clients.close()
 
-while True:
-    conn, addr = server.accept()
-    list_of_clients.append(conn)
-    print(addr[0] + " connected")
-    #maintains a list of clients for ease of broadcasting a message to all available people in the chatroom
-    #Prints the address of the person who just connected
-    start_new_thread(clientthread,(conn,addr))
-    #creates and individual thread for every user that connects
 
-conn.close()
+ip_address = "127.0.0.1"
+port = 802
+
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind((ip_address, port)) 
+server.listen(10)
+
+client_list=[]
+
+i = 1
+all_clients = {}
+print("___________________________________________")
+print("Server is online, listening for connections")
+
+while (True):
+    connection, address = server.accept()
+    client_list.append(connection)
+    all_clients[connection] = "User " + str(i)
+    post_to_others("[" + all_clients[connection] + " has connected]", connection)
+    chat_client = threading.Thread(target=client_thread,args=(connection,address))
+    chat_client.setDaemon(True)
+    chat_client.start()
+
+    i += 1
+
+
+connection.close()
 server.close()

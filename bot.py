@@ -1,77 +1,44 @@
 import socket
 import select
-#from _thread import *
 import os
 import requests
 import sys
+import re 
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-IP_address = "127.0.0.1"
-Port = 80
-
-#global message1 = ""
-
-def connect():
-    print("Running connection script\n")
-    #os.system("python3 chatClient.py 127.0.0.1 80")
-
-    # if len(sys.argv) != 3:
-    #     print("Correct usage: script, IP address, port number")
-    #     exit()
-    server.connect((IP_address, Port))
-    print("Joined chat room.\n")
-    #while(True):
-    #    print("Chaos everywhere...")
-    while True:
-        sockets_list = [sys.stdin, server]
-        read_sockets,write_socket, error_socket = select.select(sockets_list, [], [])
-        for socks in read_sockets:
-            if socks == server:
-                message = socks.recv(2048).decode('utf_8')
-                print(message)
-            else:
-                message = sys.stdin.readline()
-                server.sendall(message.encode('utf-8'))
-                sys.stdout.write("[You]")
-                sys.stdout.write(message)
-                sys.stdout.flush()
-# 	# 		    #break
-
-#     #server.close()
 
 def get_request(topic):
-
     URL = "https://en.wikipedia.org/wiki/" + topic
     response = requests.get(url = URL)
-
-    response2 = list(response.iter_lines())
-    parse(response2, topic)
+    parse(list(response.iter_lines()), topic)
 
 def parse(text_response, topic):
-
+    global astring
     lines = []
     for item in text_response:
         lines.append(item.decode('utf-8'))
     line = ""
 
     found = False
+    topic_lower = topic.lower()
     for index, item in enumerate(lines):
         item_lower = item.lower()
         # find ambigous cases
         if "refer to" in item or "refers to" in item:
+            astring = "Term too ambigous, please try again"
             print("Term too ambigous, please try again")
-            print(index)
-            exit(0)
+            # print(index)
+            exit()
 
         # find first <p> tag containing search term
-        if "<p>" in item_lower[0:5] and topic in item_lower:
+        if "<p>" in item_lower[0:5] and len(item_lower) > 15:
             found = True
             line = lines[index]
             break
 
     if found == False:
+        astring = "Term too ambigous, please try again"
         print("Term too ambigous, please try again")
-        exit(0)
+        exit()
 
     # make line into iterable list
     line_array = list(line)
@@ -108,19 +75,8 @@ def parse(text_response, topic):
 
     astring += "."
 
-    message1 = astring
-
-    print(astring)
-
-
-def main():
-    connect()
-    topic = input("Enter a topic: ")
+def main(topic):
     get_request(topic)
-    #connect()
-    #get_request(sys.argv[1])
 
-#if __name__ == main():
-#    pass
-
-main()
+if __name__ == "__main__":
+    pass
