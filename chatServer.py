@@ -4,6 +4,8 @@ import sys
 import threading
 import bot
 
+ip_address = "127.0.0.1"
+port = 80
 
 
 def client_thread(connection, address):

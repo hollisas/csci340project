@@ -14,14 +14,12 @@ except:
 while(True):
     sockets_list = [sys.stdin, server]
     read_sockets, write_socket, error_socket = select.select(sockets_list, [], [])
-
     for sockets in read_sockets:
         if sockets != server:
             message = sys.stdin.readline()
             if message[:5] != "!wiki":
                 message = message[:-1]
             server.sendall(message.encode('utf-8'))
-
         else:
             message = sockets.recv(2048).decode('utf_8')
             print(message)
